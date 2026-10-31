@@ -489,44 +489,63 @@
   // ------------------------------------------------------------------------
   App.reg('a/jadwal', { shell: 'admin', admin: true, title: 'Jadwal Mengajar', render: function (el, p) {
     badgeLoad();
-    let M = null, mode = p.mode === 'tkb' ? 'tkb' : 'guru', pilih = p.id || '', hariM = T.nowWib().hari;
+    let M = null, mode = p.mode === 'tkb' ? 'tkb' : 'guru', pilih = p.id || '', hariM = T.nowWib().hari, mkF = '';
     const HARI7 = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-    el.innerHTML = head('Jadwal Mengajar', 'Jadwal per guru / per TKB. Dipakai untuk menentukan tepat waktu, terlambat, dan alpa.', '<button class="btn btn-primary" id="btnAdd">' + ic('plus', 19) + ' Tambah Jadwal</button>') + '<div id="jBody"><div class="skel" style="height:300px"></div></div>';
+    el.innerHTML = head('Jadwal Mengajar', 'Jadwal per guru / per TKB. Dipakai untuk menentukan tepat waktu, terlambat, dan alpa.', '<button class="btn btn-tonal" id="btnCetakJdw">' + ic('printer', 19) + ' Cetak Jadwal TKB</button><button class="btn btn-primary" id="btnAdd">' + ic('plus', 19) + ' Tambah Jadwal</button>') + '<div id="jBody"><div class="skel" style="height:300px"></div></div>';
     const gambar = function () { if (!el.isConnected) return;
       const sumber = mode === 'guru' ? guruAbsen(M) : M.tkb;
       if (pilih && !sumber.some(function (x) { return x.id === pilih; })) pilih = '';
-      const list = M.jadwal.filter(function (j) { return !pilih || (mode === 'guru' ? j.id_pengguna === pilih : j.id_tkb === pilih); });
+      const list = M.jadwal.filter(function (j) { return (!pilih || (mode === 'guru' ? j.id_pengguna === pilih : j.id_tkb === pilih)) && (!mkF || !j.minggu_ke || j.minggu_ke.split(',').indexOf(mkF) >= 0); });
+      const lajur = {};   // jadwal yang jamnya beririsan (mis. bergilir minggu ke) ditampilkan berdampingan
+      HARI7.forEach(function (h) {
+        const ds = list.filter(function (j) { return j.hari === h; }).sort(function (a, b) { return T.menit(a.mulai) - T.menit(b.mulai); }), akhir = [];
+        ds.forEach(function (j) { let l = 0; while (akhir[l] !== undefined && akhir[l] > T.menit(j.mulai)) l++; akhir[l] = T.menit(j.selesai); lajur[j.id] = l; });
+        ds.forEach(function (j) { lajur[j.id + '#n'] = Math.max(1, akhir.length); });
+      });
       const nama = {}; M.guru.forEach(function (g) { nama[g.id] = g.nama; });
       const warna = {}; let wi = 0; list.forEach(function (j) { const k = mode === 'guru' ? j.id_tkb : j.id_pengguna; if (warna[k] === undefined) warna[k] = wi++ % 6; });
       const jamMin = Math.min.apply(null, [7].concat(list.map(function (j) { return Math.floor(T.menit(j.mulai) / 60); })));
       const jamMax = Math.max.apply(null, [16].concat(list.map(function (j) { return Math.ceil(T.menit(j.selesai) / 60); })));
       const ROW = 48;
       $('#jBody').innerHTML = '<div class="toolbar"><div class="seg" style="width:auto"><button data-m="guru" class="' + (mode === 'guru' ? 'on' : '') + '">' + ic('users', 16) + 'Per Guru</button><button data-m="tkb" class="' + (mode === 'tkb' ? 'on' : '') + '">' + ic('building', 16) + 'Per TKB</button></div>' +
-        '<select class="select" id="jSel" style="min-width:260px">' + (mode === 'guru' ? opsiGuru(sumber, pilih, 'Semua guru') : opsiTkb(sumber, pilih, 'Semua TKB')) + '</select><span class="muted small">' + list.length + ' jadwal</span></div>' +
+        '<select class="select" id="jSel" style="min-width:260px">' + (mode === 'guru' ? opsiGuru(sumber, pilih, 'Semua guru') : opsiTkb(sumber, pilih, 'Semua TKB')) + '</select>' +
+        '<select class="select" id="jMk" aria-label="Minggu ke"><option value="">Semua minggu ke</option>' + ['I', 'II', 'III', 'IV', 'V'].map(function (x) { return '<option value="' + x + '"' + (mkF === x ? ' selected' : '') + '>Minggu ke-' + x + '</option>'; }).join('') + '</select><span class="muted small">' + list.length + ' jadwal</span></div>' +
         (list.length ? '<div class="tbl-wrap only-d" style="max-height:72vh;overflow:auto"><div class="wk"><div class="hcell" style="left:0;z-index:3"></div>' + HARI7.map(function (h) { return '<div class="hcell ' + (h === T.nowWib().hari ? 'today' : '') + '">' + h + '</div>'; }).join('') +
           '<div class="tcol">' + Array.from({ length: jamMax - jamMin }, function (_, i) { return '<div>' + T.pad(jamMin + i) + ':00</div>'; }).join('') + '</div>' +
           HARI7.map(function (h) {
             return '<div class="dcol" style="height:' + (jamMax - jamMin) * ROW + 'px">' + list.filter(function (j) { return j.hari === h; }).map(function (j) {
               const top = (T.menit(j.mulai) / 60 - jamMin) * ROW, hgt = Math.max(30, (T.menit(j.selesai) - T.menit(j.mulai)) / 60 * ROW - 3);
               const k = mode === 'guru' ? j.id_tkb : j.id_pengguna;
-              return '<div class="blk blk-' + warna[k] + (j.aktif ? '' : ' blk-off') + '" data-j="' + esc(j.id) + '" style="top:' + top + 'px;height:' + hgt + 'px" title="' + esc(j.mapel) + '"><b class="ellipsis">' + esc(j.mapel) + (j.kelas ? ' · ' + esc(j.kelas) : '') + '</b><div class="ellipsis">' + esc(mode === 'guru' ? j.tkb : (nama[j.id_pengguna] || j.id_pengguna)) + '</div><div class="mono">' + j.mulai + '–' + j.selesai + '</div></div>';
+              const nl = lajur[j.id + '#n'] || 1, li = lajur[j.id] || 0;
+              return '<div class="blk blk-' + warna[k] + (j.aktif ? '' : ' blk-off') + '" data-j="' + esc(j.id) + '" style="top:' + top + 'px;height:' + hgt + 'px;left:calc(' + (li * 100 / nl) + '% + 3px);right:auto;width:calc(' + (100 / nl) + '% - 6px)" title="' + esc(j.mapel) + (j.minggu_ke ? ' · minggu ke-' + esc(j.minggu_ke) : '') + '"><b class="ellipsis">' + (j.minggu_ke ? '[' + esc(j.minggu_ke) + '] ' : '') + esc(j.mapel) + (j.kelas ? ' · ' + esc(j.kelas) : '') + '</b><div class="ellipsis">' + esc(mode === 'guru' ? j.tkb : (nama[j.id_pengguna] || j.id_pengguna)) + '</div><div class="mono">' + j.mulai + '–' + j.selesai + '</div></div>';
             }).join('') + '</div>';
           }).join('') + '</div></div>' +
           '<div class="only-m"><div class="days">' + HARI7.map(function (h) { const n = list.filter(function (j) { return j.hari === h; }).length; return '<button class="day ' + (h === hariM ? 'on' : '') + '" data-h="' + h + '"><small>' + h.slice(0, 3) + '</small><b>' + n + '</b><i>sesi</i></button>'; }).join('') + '</div>' +
           '<div class="col gap-12 mt-12">' + (list.filter(function (j) { return j.hari === hariM; }).sort(function (a, b) { return T.menit(a.mulai) - T.menit(b.mulai); }).map(function (j) {
-            return '<div class="mcard" data-j="' + esc(j.id) + '"><div class="grow"><div class="row-b"><span class="mono small" style="color:var(--p)">' + j.mulai + ' – ' + j.selesai + '</span>' + (j.aktif ? '' : '<span class="chip chip-slate chip-sm">nonaktif</span>') + '</div><b style="font-family:var(--f-head)">' + esc(j.mapel) + (j.kelas ? ' · ' + esc(j.kelas) : '') + '</b><div class="small muted">' + esc(nama[j.id_pengguna] || '') + ' · ' + esc(j.tkb) + '</div></div></div>';
+            return '<div class="mcard" data-j="' + esc(j.id) + '"><div class="grow"><div class="row-b"><span class="mono small" style="color:var(--p)">' + j.mulai + ' – ' + j.selesai + '</span>' + (j.minggu_ke ? '<span class="chip chip-teal chip-sm">Minggu ke-' + esc(j.minggu_ke) + '</span>' : '') + (j.aktif ? '' : '<span class="chip chip-slate chip-sm">nonaktif</span>') + '</div><b style="font-family:var(--f-head)">' + esc(j.mapel) + (j.kelas ? ' · ' + esc(j.kelas) : '') + '</b><div class="small muted">' + esc(nama[j.id_pengguna] || '') + ' · ' + esc(j.tkb) + '</div></div></div>';
           }).join('') || '<div class="card card-pad muted small center">Tidak ada jadwal di hari ' + hariM + '.</div>') + '</div></div>'
           : '<div class="panel"><div class="empty"><div class="itile">' + ic('calendar', 26) + '</div><b>Belum ada jadwal</b>Tambahkan jadwal mengajar agar status tepat waktu/terlambat/alpa terhitung otomatis.</div></div>');
       T.on($('#jBody'), 'click', '[data-m]', function (e, b) { mode = b.getAttribute('data-m'); pilih = ''; gambar(); });
       $('#jSel').onchange = function () { pilih = this.value; gambar(); };
+      $('#jMk').onchange = function () { mkF = this.value; gambar(); };
       T.on($('#jBody'), 'click', '[data-h]', function (e, b) { hariM = b.getAttribute('data-h'); gambar(); });
     };
     master(function (m, info) { if (!m) { $('#jBody').innerHTML = errBox(info.error); return; } M = m; gambar(); });
     T.on(el, 'click', '[data-j]', function (e, b) { form(M.jadwal.filter(function (j) { return j.id === b.getAttribute('data-j'); })[0]); });
     $('#btnAdd').onclick = function () { form(mode === 'guru' ? { id_pengguna: pilih } : { id_tkb: pilih }); };
+    $('#btnCetakJdw').onclick = function () {
+      if (!M) return;
+      const now = T.nowWib().tgl, y = +now.slice(0, 4), tp = +now.slice(5, 7) >= 7 ? y + '-' + (y + 1) : (y - 1) + '-' + y;
+      T.modal({ title: 'Cetak Jadwal Pelajaran per TKB', sub: 'Format: Minggu Ke · Jam Ke · Kelas X/XI/XII · Kode Guru', body:
+        '<div class="field"><label class="label" for="cjT">TKB</label><select class="select" id="cjT">' + opsiTkb(M.tkb.filter(function (t) { return t.status === 'aktif'; }), mode === 'tkb' ? pilih : '', '') + '</select></div>' +
+        '<div class="field"><label class="label" for="cjP">Tahun pelajaran</label><input class="input mono" id="cjP" value="' + tp + '" placeholder="2026-2027"></div>' +
+        '<div class="note note-p mt-12">' + ic('info', 18) + '<div>Isi kolom <b>Kelas</b> jadwal dengan X / XI / XII (boleh beberapa, dipisah koma) dan pilih <b>Minggu ke</b> agar tabel tersusun seperti template SMATER. Kop & tanda tangan diatur di Pengaturan → Kop & Penandatangan.</div></div>',
+        actions: [{ label: 'Batal' }, { label: ic('download', 17) + ' Unduh PDF', cls: 'btn-primary', onClick: async function (close, root, b) { await App.unduhPdf('jadwal.pdf', { id_tkb: $('#cjT', root).value, tahun_pelajaran: $('#cjP', root).value.trim() }, b); } }] });
+    };
     function form(j) {
       j = j || {};
       if (!M) return;
+      const mkSel = String(j.minggu_ke || '').split(',').filter(Boolean);
       T.modal({ title: j.id ? 'Ubah Jadwal' : 'Tambah Jadwal', body:
         '<div class="field"><label class="label" for="jG">Guru <span class="req">*</span></label><select class="select" id="jG">' + opsiGuru(guruAbsen(M), j.id_pengguna, '— Pilih guru —') + '</select></div>' +
         '<div class="field"><label class="label" for="jT">TKB <span class="req">*</span></label><select class="select" id="jT">' + opsiTkb(M.tkb.filter(function (t) { return t.status === 'aktif' || t.id === j.id_tkb; }), j.id_tkb, '— Pilih TKB —') + '</select></div>' +
@@ -535,9 +554,10 @@
         '<div class="field mt-16"><label class="label" for="jMp">Mata pelajaran <span class="req">*</span></label><input class="input" id="jMp" value="' + esc(j.mapel || (M.guru.filter(function (g) { return g.id === j.id_pengguna; })[0] || {}).mapel || '') + '"></div>' +
         '<div class="grid2 mt-16"><div class="field"><label class="label" for="jK">Kelas</label><input class="input" id="jK" value="' + esc(j.kelas || '') + '" placeholder="X-A"></div><div class="field"><label class="label" for="jR">Ruang</label><input class="input" id="jR" value="' + esc(j.ruang || '') + '" placeholder="Ruang 02"></div></div>' +
         '<div class="grid2 mt-16"><div class="field"><label class="label" for="jB1">Berlaku mulai</label><input class="input" type="date" id="jB1" value="' + esc(j.berlaku_mulai || '') + '"></div><div class="field"><label class="label" for="jB2">Berlaku sampai</label><input class="input" type="date" id="jB2" value="' + esc(j.berlaku_sampai || '') + '"></div></div><div class="help mt-8">Kosongkan bila berlaku terus. Isi untuk jadwal per semester.</div>' +
+        '<div class="field mt-16"><label class="label">Minggu ke (jadwal bergilir)</label><div class="mk-chips" id="jMkSel">' + ['I', 'II', 'III', 'IV', 'V'].map(function (x) { return '<label><input type="checkbox" value="' + x + '"' + (mkSel.indexOf(x) >= 0 ? ' checked' : '') + '> ' + x + '</label>'; }).join('') + '</div><div class="help">Kosongkan bila berlaku <b>setiap minggu</b>. Contoh SMATER: guru mengajar hanya hari Minggu ke-I dan ke-III setiap bulan.</div></div>' +
         '<label class="check mt-12"><input type="checkbox" id="jAk" ' + (j.aktif === false ? '' : 'checked') + '> Jadwal aktif</label>',
         actions: (j.id ? [{ label: ic('trash', 17) + ' Hapus', cls: 'btn-danger-soft', onClick: async function () { if (!await T.confirm({ title: 'Hapus jadwal ini?', ok: 'Hapus', danger: true })) return false; const r = await T.api('jadwal.hapus', { id: j.id }); if (!r.success) { T.toast(r.message, 'err'); return false; } T.toast(r.message, 'ok'); afterWrite(); master(function (m) { if (m) { M = m; gambar(); } }, true); } }] : []).concat([{ label: 'Batal' }, { label: 'Simpan', cls: 'btn-primary', onClick: async function (close, root) {
-          const d = { id: j.id || '', id_pengguna: $('#jG', root).value, id_tkb: $('#jT', root).value, hari: $('#jH', root).value, mulai: $('#jM', root).value, selesai: $('#jS', root).value, mapel: $('#jMp', root).value, kelas: $('#jK', root).value, ruang: $('#jR', root).value, berlaku_mulai: $('#jB1', root).value, berlaku_sampai: $('#jB2', root).value, aktif: $('#jAk', root).checked };
+          const d = { id: j.id || '', id_pengguna: $('#jG', root).value, id_tkb: $('#jT', root).value, hari: $('#jH', root).value, mulai: $('#jM', root).value, selesai: $('#jS', root).value, mapel: $('#jMp', root).value, kelas: $('#jK', root).value, ruang: $('#jR', root).value, berlaku_mulai: $('#jB1', root).value, berlaku_sampai: $('#jB2', root).value, aktif: $('#jAk', root).checked, minggu_ke: T.$$('#jMkSel input:checked', root).map(function (x) { return x.value; }) };
           const r = await T.api('jadwal.simpan', d);
           if (!r.success) { T.toast(r.message, 'err'); return false; }
           T.toast(r.message, 'ok'); afterWrite(); master(function (m) { if (m) { M = m; gambar(); } }, true);

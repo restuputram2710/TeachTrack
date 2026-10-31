@@ -1,6 +1,6 @@
 # 📋 Panduan Instalasi — TeachTrack (Absensi Guru Pamong SMA Terbuka)
 
-**Versi 1.0.0** · Backend: Google Apps Script (REST API) · Database: Google Sheets · Berkas: Google Drive · Frontend: GitHub Pages
+**Versi 1.1.0** · Backend: Google Apps Script (REST API) · Database: Google Sheets · Berkas: Google Drive · Frontend: GitHub Pages
 
 Anda menerima **3 berkas**:
 
@@ -214,3 +214,12 @@ Diuji dengan **simulator Google Apps Script** (Node.js) yang menjalankan `Kode.g
   - tampilan HP tanpa scroll horizontal.
 
 Pengujian dilakukan di simulator, bukan di server Google yang sebenarnya. Lakukan uji coba lapangan 1 minggu di 2 TKB sebelum dipakai seluruh guru.
+
+
+---
+
+## BAGIAN I — Fitur v1.1
+
+Jurnal Mengajar (PDF Sabtu–Minggu), PDF Honorarium format SMATER, PDF Jadwal Pelajaran per TKB, isian "Minggu ke" pada jadwal, serta Pengaturan → **Kop & Penandatangan** (3 penandatangan + logo kop). Langkah update dari v1.0 ada di `UPDATE-v1.1.md`.
+
+*site by Restu Putra Mulyana*

@@ -67,6 +67,10 @@
     return '<span class="logo-tile ' + (cls || '') + '">' + (s.logo_thumb ? '<img src="' + esc(s.logo_thumb) + '" alt="">' : ic('cap', 20)) + '</span>';
   }
   App.logoTile = logoTile;
+  /** Kredit pembuat — tampil di bawah halaman masuk & setiap halaman aplikasi. */
+  function kredit() { return '© ' + new Date().getFullYear() + ' ' + (T.Set.v.nama_aplikasi || 'TeachTrack') + ', site by Restu Putra Mulyana'; }
+  function kreditHtml() { return '<div class="credit">© ' + new Date().getFullYear() + ' ' + esc(T.Set.v.nama_aplikasi || 'TeachTrack') + ', site by <b>Restu Putra Mulyana</b></div>'; }
+  App.kreditHtml = kreditHtml;
   function shellGuru(root, name, def, params) {
     const s = T.Set.v, nav = def.nav || '';
     let top;
@@ -84,7 +88,7 @@
       navItem('beranda', 'home', 'Beranda', nav) + navItem('jadwal', 'calendar', 'Jadwal', nav) +
       '<a href="#/scan" class="fab-slot ' + (nav === 'scan' ? 'on' : '') + '" aria-label="Scan QR absen"><span class="fab">' + ic('scan', 26) + '</span>Scan QR</a>' +
       navItem('riwayat', 'history', 'Riwayat', nav) + navItem('profil', 'user', 'Profil', nav) + '</nav>';
-    root.innerHTML = '<div class="m-shell">' + top + '<main id="view" class="page page-in ' + (def.noNav ? 'no-nav' : '') + '"></main>' + navHtml + '</div>';
+    root.innerHTML = '<div class="m-shell">' + top + '<main id="view" class="page page-in ' + (def.noNav ? 'no-nav' : '') + '" data-credit="' + esc(kredit()) + '"></main>' + navHtml + '</div>';
     const back = $('#btnBack'); if (back) back.onclick = function () { if (def.onBack) return def.onBack(); if (history.length > 1 && document.referrer !== undefined && App._prev) history.back(); else App.go(def.back || 'beranda'); };
     const nb = $('#btnNotif'); if (nb) nb.onclick = function () { if (App.notifGuru) App.notifGuru(); };
     return $('#view');
@@ -119,7 +123,7 @@
       '<div class="crumb grow"><span class="only-d">Admin Portal</span><span class="only-d">' + ic('chevronRight', 14) + '</span><b class="ellipsis">' + esc(crumbs[name] || def.title || '') + '</b></div>' +
       '<span class="clock" id="clock">' + ic('clock', 16) + '<span>--:--:-- WIB</span></span>' +
       '<a class="icon-btn" href="#/a/persetujuan" aria-label="Persetujuan menunggu">' + ic('bell', 22) + '<span class="notif-dot ' + (App.badge.persetujuan ? '' : 'hidden') + '" data-badge-dot></span></a></header>' +
-      '<main id="view" class="a-page page-in"></main></div>' +
+      '<main id="view" class="a-page page-in" data-credit="' + esc(kredit()) + '"></main></div>' +
       '<nav class="bnav bnav-a ' + (App.canAbsen() ? '' : 'n4') + '" aria-label="Navigasi admin">' +
       navItem('a/dashboard', 'grid', 'Dashboard', name) + navItem('a/absensi', 'userCheck', 'Absensi', name) +
       (App.canAbsen() ? '<a href="#/scan" class="fab-slot"><span class="fab">' + ic('scan', 26) + '</span>Scan QR</a>' : '') +
@@ -159,7 +163,7 @@
       '<button class="btn btn-primary btn-block btn-lg mt-16" id="btnLogin" type="submit">Masuk ' + ic('arrowRight', 20) + '</button></form>' +
       '<div class="or">atau masuk lebih cepat</div><div class="gbtn-wrap" id="gbtn"></div>' +
       '<div class="card card-pad mt-20 row gap-12" style="background:var(--bg);box-shadow:none"><span class="itile itile-sm">' + ic('headset', 20) + '</span><div class="grow small"><b class="b" style="font-family:var(--f-head)">Kendala akses akun?</b><div class="muted">Hubungi operator TKB atau admin sekolah.</div></div><button class="link" id="lnkBantu">Bantuan</button></div>' +
-      '<div class="auth-foot"><div class="row">' + ic('building', 15) + ' ' + esc(s.wilayah || '') + ' Induk ' + esc(s.nama_sekolah_induk || '') + ' • <span class="mono">Versi ' + T.VER + '</span></div><div>Dikelola untuk kemudahan presensi guru pamong di Tempat Kegiatan Belajar (TKB)</div></div></div>';
+      '<div class="auth-foot"><div class="row">' + ic('building', 15) + ' ' + esc(s.wilayah || '') + ' Induk ' + esc(s.nama_sekolah_induk || '') + ' • <span class="mono">Versi ' + T.VER + '</span></div><div>Dikelola untuk kemudahan presensi guru pamong di Tempat Kegiatan Belajar (TKB)</div>' + kreditHtml() + '</div></div>';
     $('#eye').onclick = function () { const p = $('#lgPass'); p.type = p.type === 'password' ? 'text' : 'password'; this.innerHTML = ic(p.type === 'password' ? 'eye' : 'eyeOff', 20); };
     const bantuan = function () {
       const wa = T.waLink(s.kontak_admin_wa, 'Halo admin ' + s.nama_aplikasi + ', saya butuh bantuan akses akun. NIP saya: ');
@@ -232,7 +236,7 @@
       '<button class="btn btn-outline-p btn-block btn-lg mt-20" id="btnCek">' + ic('refresh', 20) + ' Periksa Status Ulang</button>' +
       '<button class="btn btn-danger-soft btn-block btn-lg mt-12" id="btnKeluar">' + ic('logOut', 20) + ' Keluar dari Akun</button>' +
       (wa ? '<a class="card card-pad mt-20 center small" style="display:block" target="_blank" rel="noopener" href="' + wa + '"><div class="muted">Butuh persetujuan segera?</div><div class="b mt-4" style="color:var(--p);font-family:var(--f-head)">' + ic('message', 16) + ' Hubungi Admin via WhatsApp</div></a>' : '') +
-      '<div class="auth-foot">' + esc(s.nama_aplikasi) + ' • ' + esc(s.wilayah || '') + '</div></div>';
+      '<div class="auth-foot">' + esc(s.nama_aplikasi) + ' • ' + esc(s.wilayah || '') + kreditHtml() + '</div></div>';
     const cek = async function (diam) {
       const r = await T.withBtn($('#btnCek'), function () { return T.api('auth.status', {}, { token: pend.token }); });
       if (!r.success) { if (r.code === 'AUTH') { T.LS.del('pend'); T.toast('Sesi verifikasi berakhir. Silakan masuk dengan Google lagi.', 'warn'); return App.go('login', true); } if (!diam) T.toast(r.message, 'err'); return; }
@@ -255,7 +259,7 @@
       '<h1 style="font-size:23px">Akses Darurat</h1><p class="lead">Khusus pemilik aplikasi saat akun admin tidak bisa dipakai. Setiap percobaan dicatat di log audit.</p>' +
       '<form id="fDar" class="mt-24"><div class="field"><label class="label" for="dU">Nama pengguna</label><input class="input mono" id="dU" autocomplete="off"></div>' +
       '<div class="field"><label class="label" for="dP">Kata sandi darurat</label><input class="input mono" id="dP" type="password" autocomplete="off"></div>' +
-      '<button class="btn btn-danger btn-block btn-lg mt-20" id="bDar">Masuk Darurat</button></form><div class="auth-foot"><a href="#/login">Kembali ke halaman masuk</a></div></div>';
+      '<button class="btn btn-danger btn-block btn-lg mt-20" id="bDar">Masuk Darurat</button></form><div class="auth-foot"><a href="#/login">Kembali ke halaman masuk</a>' + kreditHtml() + '</div></div>';
     $('#fDar').onsubmit = async function (e) {
       e.preventDefault();
       const r = await T.withBtn($('#bDar'), function () { return T.api('auth.darurat', { username: $('#dU').value.trim(), password: $('#dP').value }); });
@@ -289,7 +293,7 @@
     const me = T.Sesi.me || {};
     el.innerHTML = '<div class="auth"><div class="center"><span class="itile" style="width:64px;height:64px;border-radius:20px">' + ic('key', 30) + '</span></div>' +
       '<h1 style="font-size:23px">Buat Kata Sandi Baru</h1><p class="lead">Halo <b>' + esc(me.nama || '') + '</b>, demi keamanan akun, ganti kata sandi sementara Anda sebelum melanjutkan.</p>' +
-      '<div class="mt-24">' + App.formSandi(true) + '</div><button class="btn btn-ghost btn-block mt-12" id="bOut">' + ic('logOut', 18) + ' Keluar</button></div>';
+      '<div class="mt-24">' + App.formSandi(true) + '</div><button class="btn btn-ghost btn-block mt-12" id="bOut">' + ic('logOut', 18) + ' Keluar</button><div class="auth-foot">' + kreditHtml() + '</div></div>';
     App.pasangFormSandi(function () { App.go(App.home(), true); });
     $('#bOut').onclick = function () { App.logout(); };
   } });

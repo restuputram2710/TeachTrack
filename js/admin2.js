@@ -75,7 +75,7 @@
         '<div class="panel mt-16"><div class="panel-hd" style="align-items:center"><div class="tabs" style="border:0" id="lpTabs"><button data-t="rekap" class="' + (tab === 'rekap' ? 'on' : '') + '">Rekap per Guru</button><button data-t="honor" class="' + (tab === 'honor' ? 'on' : '') + '">Honorarium</button><button data-t="rinci" class="' + (tab === 'rinci' ? 'on' : '') + '">Rincian Harian</button></div>' +
         '<div class="ifield" style="min-width:220px">' + ic('search', 18) + '<input class="input input-sm" id="lpQ" placeholder="Cari nama…" value="' + esc(q) + '"></div></div><div id="lpTbl" style="padding:0 18px 18px"></div></div>' +
         '<div class="card card-pad mt-16 row wrap lp-bar"><label class="check small"><input type="checkbox" id="lpRinci"> Sertakan lampiran rincian harian</label><span class="grow"></span>' +
-        '<button class="btn btn-outline" id="lpCsv">' + ic('download', 18) + ' CSV</button><button class="btn btn-tonal" id="lpPdfR">' + ic('fileText', 18) + ' Cetak Rekap (PDF)</button><button class="btn btn-primary" id="lpPdfH">' + ic('wallet', 18) + ' Cetak Honorarium (PDF)</button></div>';
+        '<button class="btn btn-outline" id="lpCsv">' + ic('download', 18) + ' CSV</button><button class="btn btn-outline" id="lpJurnal">' + ic('book', 18) + ' Jurnal Guru (PDF)</button><button class="btn btn-tonal" id="lpPdfR">' + ic('fileText', 18) + ' Cetak Rekap (PDF)</button><button class="btn btn-primary" id="lpPdfH">' + ic('wallet', 18) + ' Cetak Honorarium (PDF)</button></div>';
       const pb = R.perBulan;
       Charts.bars($('#cBln'), { labels: pb.map(function (x) { return T.BLN3[+x.bulan.slice(5) - 1] + ' ' + x.bulan.slice(2, 4); }), tipLabels: pb.map(function (x) { return T.bulanLabel(x.bulan); }), stacked: true,
         series: [{ name: 'Hadir tepat/luar', color: 'var(--p)', values: pb.map(function (x) { return x.hadir - x.terlambat; }) }, { name: 'Terlambat', color: '#F59E0B', values: pb.map(function (x) { return x.terlambat; }) }, { name: 'Izin/Sakit', color: '#94A3B8', values: pb.map(function (x) { return x.izin + x.sakit; }) }, { name: 'Alpa', color: '#EF4444', values: pb.map(function (x) { return x.alpa; }) }] });
@@ -87,6 +87,7 @@
       $('#lpQ').oninput = T.debounce(function () { q = this.value.toLowerCase(); tabel(); }, 150);
       $('#lpPdfR').onclick = function () { pdf('rekap', this); }; $('#lpPdfH').onclick = function () { pdf('honor', this); };
       $('#lpCsv').onclick = csv;
+      $('#lpJurnal').onclick = jurnalGuru;
       tabel();
     }
     function tabel() { if (!el.isConnected) return;
@@ -121,6 +122,20 @@
       T.toast(r.message, 'ok', 5000);
       if (r.data.url) T.modal({ title: 'PDF siap', body: '<p class="small">Berkas <b class="mono">' + esc(r.data.nama) + '</b> sudah diunduh dan tersimpan di Google Drive (folder Laporan PDF).</p>' + (r.data.info && r.data.info.total !== undefined ? '<div class="kv mt-12"><div><small>Jumlah guru</small><b>' + r.data.info.jumlah + '</b></div><div><small>Total honor</small><b>' + T.rupiah(r.data.info.total) + '</b></div></div>' : ''), actions: [{ label: 'Tutup' }, { label: ic('link', 17) + ' Buka di Drive', cls: 'btn-primary', onClick: function () { window.open(r.data.url, '_blank', 'noopener'); } }] });
     }
+    function jurnalGuru() {
+      App.master(function (m) {
+        if (!m || $('.mod-root')) return;
+        const b1 = (f.dari || T.nowWib().tgl).slice(0, 7), b2 = (f.sampai || T.nowWib().tgl).slice(0, 7);
+        T.modal({ title: 'Cetak Jurnal Mengajar Guru', sub: 'Laporan Bukti Kinerja & Dokumentasi Guru Pamong (per akhir pekan Sabtu–Minggu)', body:
+          '<div class="field"><label class="label" for="jgG">Guru pamong</label><select class="select" id="jgG">' + App.opsiGuru(App.guruAbsen(m), f.id_pengguna, '— Pilih guru —') + '</select></div>' +
+          '<div class="field"><label class="label" for="jgT">TKB</label><select class="select" id="jgT">' + App.opsiTkb(m.tkb, f.id_tkb, '— TKB utama guru (otomatis) —') + '</select></div>' +
+          '<div class="grid2 mt-16"><div class="field"><label class="label" for="jgD">Dari bulan</label><input class="input" type="month" id="jgD" value="' + b1 + '"></div><div class="field"><label class="label" for="jgS">Sampai bulan</label><input class="input" type="month" id="jgS" value="' + b2 + '"></div></div>',
+          actions: [{ label: 'Batal' }, { label: ic('download', 17) + ' Unduh PDF', cls: 'btn-primary', onClick: async function (close, root, btn) {
+            const g = $('#jgG', root).value; if (!g) { T.toast('Pilih guru.', 'warn'); return false; }
+            await App.unduhPdf('jurnal.pdf', { id_pengguna: g, id_tkb: $('#jgT', root).value, dari: $('#jgD', root).value, sampai: $('#jgS', root).value }, btn); return false;
+          } }] });
+      });
+    }
     function csv() {
       const rows = [['No', 'Nama', 'NIP', 'Hari Jadwal', 'Hadir', 'Tepat Waktu', 'Terlambat', 'Di Luar Jadwal', 'Izin', 'Sakit', 'Alpa', '% Hadir', 'Kehadiran Terverifikasi', 'Tarif', 'Honor']];
       R.rows.forEach(function (x, i) { rows.push([i + 1, x.nama, x.nip, x.hariJadwal, x.hadir, x.tepat, x.terlambat, x.luar, x.izin, x.sakit, x.alpa, x.persen, x.terverifikasi, R.tarif, x.honor]); });
@@ -138,7 +153,7 @@
   App.reg('a/pengaturan', { shell: 'admin', admin: true, title: 'Pengaturan Sistem', render: function (el, p) {
     App.badgeLoad();
     let tab = p.tab || 'identitas', D = null;
-    const TABS = [['identitas', 'palette', 'Identitas Aplikasi'], ['aturan', 'ruler', 'Aturan Absen & Honor'], ['ttd', 'fileText', 'Penandatangan Laporan'], ['google', 'google', 'Login Google'], ['impor', 'database', 'Impor Data'], ['sistem', 'activity', 'Sistem & Log']];
+    const TABS = [['identitas', 'palette', 'Identitas Aplikasi'], ['aturan', 'ruler', 'Aturan Absen & Honor'], ['ttd', 'fileText', 'Kop & Penandatangan'], ['google', 'google', 'Login Google'], ['impor', 'database', 'Impor Data'], ['sistem', 'activity', 'Sistem & Log']];
     el.innerHTML = head('Pengaturan Sistem', 'Identitas aplikasi, aturan absensi, honorarium, dan keamanan.') +
       '<div class="set-grid"><div class="vtabs" id="sTabs">' + TABS.map(function (t) { return '<button class="pill ' + (tab === t[0] ? 'on' : '') + '" data-t="' + t[0] + '">' + ic(t[1], 17) + t[2] + '</button>'; }).join('') + '</div><div id="sBody" class="mt-16"><div class="skel" style="height:300px"></div></div></div>';
     T.on($('#sTabs'), 'click', '[data-t]', function (e, b) { tab = b.getAttribute('data-t'); T.$$('#sTabs .pill').forEach(function (x) { x.classList.toggle('on', x === b); }); history.replaceState(null, '', '#/a/pengaturan?tab=' + tab); gambar(); });
@@ -210,9 +225,31 @@
         $('#rSimpan').onclick = function () { simpan({ tarif_per_kehadiran: $('#rTarif').value, toleransi_terlambat_menit: $('#rTol').value, radius_gps_meter: $('#rRad').value, akurasi_maks_meter: $('#rAcc').value, kontak_admin_wa: $('#rWa').value }, this); };
       } else if (tab === 'ttd') {
         const blok = function (n, def) { return '<div class="card card-pad" style="box-shadow:none"><h4>Penandatangan ' + n + ' <span class="muted small" style="font-weight:400">(' + def + ')</span></h4><div class="field mt-12"><label class="label" for="t' + n + 'j">Jabatan</label><input class="input" id="t' + n + 'j" value="' + esc(s['penandatangan_' + n + '_jabatan']) + '"></div><div class="field"><label class="label" for="t' + n + 'n">Nama</label><input class="input" id="t' + n + 'n" value="' + esc(s['penandatangan_' + n + '_nama']) + '"></div><div class="field"><label class="label" for="t' + n + 'p">NIP</label><input class="input mono" id="t' + n + 'p" value="' + esc(s['penandatangan_' + n + '_nip']) + '"></div></div>'; };
-        box.innerHTML = '<div class="panel"><div class="panel-hd"><div><h3>Penandatangan Laporan</h3><div class="sub">Muncul di bagian bawah PDF rekap & honorarium.</div></div></div><div class="panel-bd"><div class="field"><label class="label" for="tKota">Kota (untuk tanggal tanda tangan)</label><input class="input" id="tKota" value="' + esc(s.kota_ttd) + '"></div>' +
-          '<div class="gcols c2 mt-16">' + blok(1, 'kiri — "Mengetahui"') + blok(2, 'kanan — bertanggal') + '</div><div class="row mt-20" style="justify-content:flex-end"><button class="btn btn-primary" id="tSimpan">' + ic('check', 18) + ' Simpan</button></div></div></div>';
-        $('#tSimpan').onclick = function () { const pt = { kota_ttd: $('#tKota').value }; [1, 2].forEach(function (n) { pt['penandatangan_' + n + '_jabatan'] = $('#t' + n + 'j').value; pt['penandatangan_' + n + '_nama'] = $('#t' + n + 'n').value; pt['penandatangan_' + n + '_nip'] = $('#t' + n + 'p').value; }); simpan(pt, this); };
+        const fld = function (id, k, label, ph) { return '<div class="field"><label class="label" for="' + id + '">' + label + '</label><input class="input" id="' + id + '" value="' + esc(s[k]) + '" placeholder="' + esc(ph || '') + '"></div>'; };
+        box.innerHTML = '<div class="panel"><div class="panel-hd"><div><h3>Kop Surat</h3><div class="sub">Dipakai di PDF honorarium, jadwal pelajaran TKB, dan jurnal.</div></div></div><div class="panel-bd">' +
+          '<div class="field"><label class="label">Logo kop (logo sekolah/yayasan)</label><div class="logo-drop"><div class="logo-prev" id="kpPrev">' + (s.logo_kop ? '<img src="' + esc(s.logo_kop) + '" alt="Logo kop">' : (s.logo_thumb ? '<img src="' + esc(s.logo_thumb) + '" alt="">' : ic('building', 34))) + '</div><div class="col" style="gap:8px"><label class="btn btn-tonal btn-sm" style="cursor:pointer">' + ic('upload', 16) + ' Unggah Logo Kop<input type="file" accept="image/png,image/jpeg,image/webp" id="kpFile" class="sr"></label>' +
+          (s.logo_kop ? '<button class="btn btn-ghost btn-sm" id="kpHapus" style="color:var(--err-tx)">' + ic('trash', 16) + ' Hapus (pakai logo aplikasi)</button>' : '<div class="help">Belum diisi — memakai logo aplikasi.</div>') + '</div></div></div>' +
+          fld('k1', 'kop_baris_1', 'Baris kop 1', 'YAYASAN PEMBINA LEMBAGA PENDIDIKAN DASAR DAN MENENGAH') + fld('k2', 'kop_baris_2', 'Baris kop 2', 'PERSATUAN GURU REPUBLIK INDONESIA ( YPLP DIKDASMEN PGRI )') + fld('k3', 'kop_baris_3', 'Baris kop 3', 'PROVINSI JAWA BARAT') +
+          '<div class="grid2 mt-16">' + fld('kAk', 'akreditasi', 'Akreditasi', 'A') + fld('kEm', 'email_sekolah', 'Email sekolah', 'smapgrispa@gmail.com') + '</div>' +
+          '<div class="mt-16">' + fld('kAl', 'alamat_sekolah', 'Alamat sekolah', 'Jl. … Kab. Tasikmalaya 46411 Tlp. …') + '</div>' +
+          '<div class="help mt-8">Nama sekolah induk diambil dari Identitas Aplikasi: <b>' + esc(s.nama_sekolah_induk) + '</b></div></div></div>' +
+          '<div class="panel mt-16"><div class="panel-hd"><div><h3>Penandatangan</h3><div class="sub">Honorarium: Pengelola (kiri), Bendahara (kanan), Kepala Sekolah (tengah, "Disetujui Oleh"). Jadwal: Kepala Sekolah & Pengelola. Jurnal: Pengelola & guru pamong.</div></div></div><div class="panel-bd"><div class="field"><label class="label" for="tKota">Kota (untuk tanggal tanda tangan)</label><input class="input" id="tKota" value="' + esc(s.kota_ttd) + '"></div>' +
+          '<div class="gcols c3 mt-16">' + blok(1, 'Kepala Sekolah') + blok(2, 'Bendahara') + blok(3, 'Pengelola SMA Terbuka') + '</div><div class="row mt-20" style="justify-content:flex-end"><button class="btn btn-primary" id="tSimpan">' + ic('check', 18) + ' Simpan</button></div></div></div>';
+        $('#tSimpan').onclick = function () {
+          const pt = { kota_ttd: $('#tKota').value, kop_baris_1: $('#k1').value, kop_baris_2: $('#k2').value, kop_baris_3: $('#k3').value, akreditasi: $('#kAk').value, email_sekolah: $('#kEm').value, alamat_sekolah: $('#kAl').value };
+          [1, 2, 3].forEach(function (n) { pt['penandatangan_' + n + '_jabatan'] = $('#t' + n + 'j').value; pt['penandatangan_' + n + '_nama'] = $('#t' + n + 'n').value; pt['penandatangan_' + n + '_nip'] = $('#t' + n + 'p').value; });
+          simpan(pt, this);
+        };
+        $('#kpFile').onchange = async function () {
+          const file = this.files[0]; if (!file) return;
+          try {
+            const img = await T.loadImg(await T.fileToDataUrl(file));
+            let th = kotak(img, 200, 'image/png'); if (th.length > 45000) th = kotak(img, 150, 'image/png'); if (th.length > 45000) th = kotak(img, 140, 'image/jpeg', .88);
+            const r = await T.api('pengaturan.logo', { jenis: 'kop', thumb: th });
+            if (!r.success) return T.toast(r.message, 'err'); D.set = r.data.set; T.toast(r.message, 'ok'); gambar();
+          } catch (e) { T.toast('Gambar tidak dapat dibaca.', 'err'); }
+        };
+        const kh = $('#kpHapus'); if (kh) kh.onclick = async function () { const r = await T.api('pengaturan.logo', { jenis: 'kop', hapus: true }); if (!r.success) return T.toast(r.message, 'err'); D.set = r.data.set; gambar(); };
       } else if (tab === 'google') {
         const g = D.rahasia;
         box.innerHTML = '<div class="panel"><div class="panel-hd"><div><h3 class="row">' + ic('google', 20) + ' Login dengan Google</h3><div class="sub">Opsional. Guru dapat masuk memakai akun Google; akun baru wajib disetujui admin.</div></div><span class="chip ' + (g.googleAktif ? 'chip-ok' : 'chip-slate') + '"><span class="dot"></span>' + (g.googleAktif ? 'Aktif' : 'Belum aktif') + '</span></div><div class="panel-bd">' +

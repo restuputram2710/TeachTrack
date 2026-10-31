@@ -28,7 +28,7 @@
     const st = statusSesi(j, hariIni, isToday);
     return '<div class="sess ' + st.cls + '"><div class="row-b"><span class="time">' + ic('clock', 15) + T.jam5(j.mulai) + ' – ' + T.jam5(j.selesai) + ' WIB</span>' + st.chip + '</div>' +
       '<div class="row-b"><h4 class="ellipsis">' + esc(j.mapel) + '</h4>' + (j.kelas ? '<span class="chip chip-p chip-sm">Kelas ' + esc(j.kelas) + '</span>' : '') + '</div>' +
-      '<div class="meta">' + ic('mapPin', 15) + '<span class="ellipsis">' + esc(j.tkb) + (j.ruang ? ' (' + esc(j.ruang) + ')' : '') + '</span>' + (idx !== undefined ? '<span class="grow"></span><span class="mono xs">Sesi ' + (idx + 1) + '</span>' : '') + '</div></div>';
+      '<div class="meta">' + ic('mapPin', 15) + '<span class="ellipsis">' + esc(j.tkb) + (j.ruang ? ' (' + esc(j.ruang) + ')' : '') + '</span>' + (j.minggu_ke ? '<span class="chip chip-teal chip-sm" style="flex:none">Minggu ke-' + esc(j.minggu_ke) + '</span>' : '') + (idx !== undefined ? '<span class="grow"></span><span class="mono xs">Sesi ' + (idx + 1) + '</span>' : '') + '</div></div>';
   }
   function dblock(t, past) { const d = T.parseTgl(t); return '<span class="dblock ' + (past ? 'past' : '') + '"><b>' + T.pad(d.getUTCDate()) + '</b><span>' + T.BLN3[d.getUTCMonth()] + '</span></span>'; }
   function agendaRow(g) {
@@ -114,7 +114,7 @@
       '<div class="qgrid">' + [
         ['#/scan', 'camera', 't-blue', 'Scan Absen'], ['#/jadwal', 'calendar', 't-indigo', 'Jadwal'], ['#/agenda', 'calendarCheck', 't-green', 'Agenda'],
         ['#/izin', 'calendarEdit', 't-amber', 'Ajukan Izin', pending], ['#/riwayat', 'history', 't-violet', 'Riwayat'], ['#/honor', 'wallet', 't-teal', 'Honor Saya'],
-        ['#/profil', 'idCard', 't-slate', 'Profil'], ['bantuan', 'headset', 't-sky', 'Bantuan']
+        ['#/jurnal', 'book', 't-slate', 'Jurnal'], ['bantuan', 'headset', 't-sky', 'Bantuan']
       ].map(function (q) {
         const inner = '<span class="itile ' + q[2] + '">' + ic(q[1], 24) + '</span>' + q[3] + (q[4] ? '<span class="badge badge-err">' + q[4] + '</span>' : '');
         return q[0] === 'bantuan' ? '<button class="qitem" id="qBantu">' + inner + '</button>' : '<a class="qitem" href="' + q[0] + '">' + inner + '</a>';
@@ -188,7 +188,7 @@
       const menitTotal = jad.reduce(function (a, j) { return a + Math.max(0, T.menit(j.selesai) - T.menit(j.mulai)); }, 0);
       const tkbN = {}; jad.forEach(function (j) { tkbN[j.id_tkb] = 1; });
       const draw = function () { if (!el.isConnected) return;
-        const hari = T.hariOf(sel), list = jad.filter(function (j) { return j.hari === hari; }).sort(function (a, b) { return T.menit(a.mulai) - T.menit(b.mulai); });
+        const hari = T.hariOf(sel), list = jad.filter(function (j) { return j.hari === hari && T.cocokMinggu(j, sel); }).sort(function (a, b) { return T.menit(a.mulai) - T.menit(b.mulai); });
         const isToday = sel === now.tgl;
         el.innerHTML = '<div class="card card-pad"><div class="row-b"><div><span class="chip chip-p chip-sm"><span class="dot"></span>Minggu ini · ' + T.tglIndo(week[0], { pendek: true, tanpaTahun: true }) + ' – ' + T.tglIndo(week[6], { pendek: true }) + '</span>' +
           '<h3 class="mt-8">' + esc(T.Set.v.wilayah || 'SMA Terbuka') + '</h3><div class="small muted">Induk: ' + esc(T.Set.v.nama_sekolah_induk || '-') + '</div></div><span class="itile">' + ic('cap', 24) + '</span></div>' +
@@ -196,15 +196,17 @@
           '<div class="row" style="padding:10px 12px;border-radius:12px;background:var(--bg)">' + ic('building', 18) + '<div><div class="xs muted">Lokasi Belajar</div><b class="mono small">' + Object.keys(tkbN).length + ' TKB Binaan</b></div></div></div></div>' +
           '<div class="row-b mt-20" style="margin-bottom:10px"><span class="eyebrow">Pilih Hari Mengajar</span><span class="xs muted row">' + ic('chevronLeft', 13) + 'Geser' + ic('chevronRight', 13) + '</span></div>' +
           '<div class="days" id="days">' + week.map(function (t) {
-            const n = jad.filter(function (j) { return j.hari === T.hariOf(t); }).length, dd = T.parseTgl(t);
+            const n = jad.filter(function (j) { return j.hari === T.hariOf(t) && T.cocokMinggu(j, t); }).length, dd = T.parseTgl(t);
             return '<button class="day ' + (t === sel ? 'on' : '') + (t === now.tgl ? ' today' : '') + '" data-t="' + t + '"><small>' + T.hariOf(t).slice(0, 3) + '</small><b>' + dd.getUTCDate() + '</b><i>' + (n ? n + ' Sesi' : 'Off') + '</i></button>';
           }).join('') + '</div>' +
           '<div class="row-b mt-16" style="margin-bottom:12px"><h3 class="row" style="font-size:16px"><span class="live-dot" style="background:var(--p);box-shadow:0 0 0 3px var(--p-100)"></span>' + T.tglIndo(sel, { hari: true }) + '</h3>' + (isToday ? '<span class="chip chip-ok chip-sm">Hari Ini (' + list.length + ' Sesi)</span>' : '') + '</div>' +
           (list.length ? '<div class="col gap-12">' + list.map(function (j, i) { return sesiCard(j, d.hariIni, isToday, i); }).join('') + '</div>'
             : '<div class="card card-dash card-pad center"><span class="itile" style="background:var(--slate-bg);color:var(--tx-3)">' + ic('sun', 24) + '</span><h4 class="mt-12">Tidak ada jadwal di hari ini</h4><p class="small muted mt-4">Gunakan waktu untuk persiapan bahan ajar modul PJJ mandiri.</p></div>') +
+          (d.tkb && d.tkb.length ? '<button class="btn btn-outline-p btn-block mt-20" id="btnJdwPdf">' + ic('download', 19) + ' Unduh Jadwal Pelajaran TKB (PDF)</button>' : '') +
           '<div class="card card-pad card-tint mt-20 row" style="align-items:flex-start;gap:12px">' + ic('help', 22) + '<div><h4>Penyesuaian Jadwal TKB?</h4><p class="small muted mt-4">Perlu bertukar sesi atau ada perubahan jadwal? Hubungi admin agar jadwal diperbarui.</p>' +
           (T.Set.v.kontak_admin_wa ? '<a class="link mt-8" target="_blank" rel="noopener" href="' + T.waLink(T.Set.v.kontak_admin_wa, 'Halo admin, saya ingin menyesuaikan jadwal mengajar.') + '">Hubungi Admin ' + ic('arrowRight', 15) + '</a>' : '') + '</div></div>';
         T.on($('#days'), 'click', '[data-t]', function (e, b) { sel = b.getAttribute('data-t'); draw(); });
+        const bj = $('#btnJdwPdf'); if (bj) bj.onclick = function () { App.unduhJadwalTkb(d.tkb, this); };
         const on = $('.day.on'); if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
       };
       draw();
@@ -272,7 +274,7 @@
       function terdampak() {
         if (!T.parseTgl(st.mulai) || !T.parseTgl(st.selesai) || st.selesai < st.mulai) return [];
         const out = []; let t = st.mulai, g = 0;
-        while (t <= st.selesai && g++ < 40) { const h = T.hariOf(t); (d.jadwal || []).filter(function (j) { return j.hari === h; }).forEach(function (j) { out.push({ t: t, j: j }); }); t = T.addDays(t, 1); }
+        while (t <= st.selesai && g++ < 40) { const h = T.hariOf(t), tt = t; (d.jadwal || []).filter(function (j) { return j.hari === h && T.cocokMinggu(j, tt); }).forEach(function (j) { out.push({ t: t, j: j }); }); t = T.addDays(t, 1); }
         return out;
       }
       function drawForm(box, d, me) {
@@ -509,5 +511,67 @@
       $('#pKeluar').onclick = async function () { if (await T.confirm({ title: 'Keluar dari akun?', ok: 'Keluar' })) App.logout('Anda telah keluar.'); };
     });
     function li(icon, t, s, id) { return '<' + (id ? 'button id="' + id + '"' : 'div') + ' class="li"><span class="itile itile-sm">' + ic(icon, 18) + '</span><div class="grow" style="min-width:0"><div class="t">' + t + '</div><div class="s ellipsis">' + s + '</div></div>' + (id ? '<span class="chev">' + ic('chevronRight', 18) + '</span>' : '') + '</' + (id ? 'button' : 'div') + '>'; }
+  } });
+
+  // ------------------------------------------------------------------------
+  //  v1.1 — UNDUH PDF (jadwal TKB) & JURNAL MENGAJAR
+  // ------------------------------------------------------------------------
+  async function unduhPdf(action, data, btn) {
+    T.toast('Menyusun PDF… mohon tunggu beberapa detik.', 'info');
+    const r = await T.withBtn(btn, function () { return T.api(action, data); });
+    if (!r.success) { T.toast(r.message, 'err', 6000); return null; }
+    T.downloadDataUrl(r.data.dataUrl, r.data.nama); T.toast('PDF diunduh: ' + r.data.nama, 'ok', 5000);
+    return r;
+  }
+  App.unduhPdf = unduhPdf;
+  /** Pilih TKB (bila lebih dari satu) lalu unduh PDF jadwal pelajaran TKB. */
+  App.unduhJadwalTkb = function (tkbList, btn) {
+    if (tkbList.length === 1) return unduhPdf('jadwal.pdf', { id_tkb: tkbList[0].id }, btn);
+    T.modal({ title: 'Unduh Jadwal Pelajaran TKB', body: '<div class="field"><label class="label" for="pdTkb">Pilih TKB</label><select class="select" id="pdTkb">' + tkbList.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.nama) + '</option>'; }).join('') + '</select></div>',
+      actions: [{ label: 'Batal' }, { label: ic('download', 17) + ' Unduh PDF', cls: 'btn-primary', onClick: async function (close, root, b) { await unduhPdf('jadwal.pdf', { id_tkb: $('#pdTkb', root).value }, b); } }] });
+  };
+
+  App.reg('jurnal', { shell: 'guru', guru: true, nav: '', title: 'Jurnal Mengajar', sub: 'Laporan bukti kinerja & dokumentasi', back: 'beranda', render: function (el) {
+    const ym = T.nowWib().tgl.slice(0, 7);
+    const f = T.LS.get('jurf', null) || { dari: ym, sampai: ym, id_tkb: '' };
+    let D = null;
+    el.innerHTML = '<div class="card card-pad"><div class="row" style="gap:12px;align-items:flex-start"><span class="itile">' + ic('book', 22) + '</span><div><h3 style="font-size:16.5px">Laporan Bukti Kinerja &amp; Dokumentasi</h3><p class="small muted mt-4">Disusun otomatis dari absensi di TKB Anda: mata pelajaran, guru kunjung yang hadir, dan foto. Satu baris untuk setiap akhir pekan (Sabtu–Minggu).</p></div></div>' +
+      '<div class="field mt-16"><label class="label" for="jrTkb">TKB</label><select class="select" id="jrTkb"><option value="">Memuat…</option></select></div>' +
+      '<div class="grid2 mt-12"><div class="field"><label class="label" for="jrDari">Dari bulan</label><input class="input input-sm" type="month" id="jrDari" value="' + f.dari + '"></div><div class="field"><label class="label" for="jrSampai">Sampai bulan</label><input class="input input-sm" type="month" id="jrSampai" value="' + f.sampai + '"></div></div>' +
+      '<button class="btn btn-tonal btn-block mt-12" id="jrGo">' + ic('refresh', 18) + ' Tampilkan</button></div><div id="jrBody" class="mt-16"></div>';
+    const muat = async function (btn) {
+      if (!el.isConnected) return;
+      f.dari = $('#jrDari').value || ym; f.sampai = $('#jrSampai').value || f.dari; f.id_tkb = $('#jrTkb').value || f.id_tkb; T.LS.set('jurf', f);
+      $('#jrBody').innerHTML = '<div class="skel" style="height:200px"></div>';
+      const r = await T.withBtn(btn, function () { return T.api('jurnal.data', { id_tkb: f.id_tkb, dari: f.dari, sampai: f.sampai }); });
+      if (!el.isConnected) return;
+      if (!r.success) { $('#jrBody').innerHTML = '<div class="card card-pad"><div class="empty"><div class="itile">' + ic('book', 24) + '</div><b>Jurnal belum tersedia</b>' + esc(r.message) + '</div></div>'; return; }
+      D = r.data; f.id_tkb = D.tkb.id;
+      $('#jrTkb').innerHTML = D.tkbList.map(function (t) { return '<option value="' + esc(t.id) + '"' + (t.id === D.tkb.id ? ' selected' : '') + '>' + esc(t.nama) + '</option>'; }).join('');
+      gambar();
+    };
+    const gambar = function () {
+      if (!el.isConnected) return;
+      const box = $('#jrBody');
+      box.innerHTML = '<div class="row-b" style="margin-bottom:10px"><span class="eyebrow">' + esc(D.tkb.nama) + ' · ' + T.bulanLabel(D.dari) + (D.sampai !== D.dari ? ' – ' + T.bulanLabel(D.sampai) : '') + '</span><span class="chip chip-p chip-sm">' + D.minggu.length + ' pekan</span></div>' +
+        (D.minggu.length ? '<div class="col gap-12">' + D.minggu.map(function (x, i) {
+          return '<div class="card card-pad jr-card"><div class="row-b"><div><span class="mono xs muted">No. ' + (i + 1) + '</span><h4>Minggu ' + esc(x.ke) + '</h4><div class="small" style="color:var(--p);font-weight:600">' + esc(x.label) + '</div></div>' +
+            (x.ada_foto ? '<span class="chip chip-ok chip-sm">' + ic('camera', 13) + ' Foto ada</span>' : '<span class="chip chip-slate chip-sm">Tanpa foto</span>') + '</div>' +
+            (x.mapel.length ? '<div class="small muted mt-12">Kegiatan pembelajaran tatap muka mata pelajaran:</div><ol class="jr-list">' + x.mapel.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ol>' : '') +
+            (x.guru.length ? '<div class="small muted mt-8">Guru kunjung yang hadir:</div><ol class="jr-list">' + x.guru.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ol>' : '') +
+            '<div class="field mt-12"><label class="label" for="jc' + i + '" style="font-size:12.5px">Catatan / kehadiran murid <span class="muted" style="font-weight:400">(opsional)</span></label><textarea class="textarea" id="jc' + i + '" maxlength="600" placeholder="Contoh: Semua murid kelas X, XI, XII hadir">' + esc(x.catatan) + '</textarea></div>' +
+            '<div class="row mt-8" style="justify-content:flex-end"><button class="btn btn-tonal btn-xs" data-simpan="' + i + '">' + ic('check', 14) + ' Simpan catatan</button></div></div>';
+        }).join('') + '</div>' : '<div class="card card-pad"><div class="empty"><div class="itile">' + ic('calendar', 24) + '</div><b>Belum ada kegiatan</b>Belum ada absensi di TKB ini pada akhir pekan dalam periode yang dipilih.</div></div>') +
+        '<button class="btn btn-primary btn-block btn-lg mt-20" id="jrPdf">' + ic('download', 20) + ' Unduh Jurnal (PDF)</button><p class="xs muted center mt-8">PDF siap cetak, tersimpan juga di Google Drive sekolah.</p>';
+      T.on(box, 'click', '[data-simpan]', async function (e, b) {
+        const i = +b.getAttribute('data-simpan'), x = D.minggu[i], v = $('#jc' + i).value;
+        const r = await T.withBtn(b, function () { return T.api('jurnal.simpan', { id_tkb: D.tkb.id, minggu: x.minggu, catatan: v }); });
+        if (!r.success) return T.toast(r.message, 'err'); x.catatan = r.data.catatan; T.toast(r.message, 'ok');
+      });
+      $('#jrPdf').onclick = function () { unduhPdf('jurnal.pdf', { id_tkb: D.tkb.id, dari: D.dari, sampai: D.sampai }, this); };
+    };
+    $('#jrGo').onclick = function () { muat(this); };
+    $('#jrTkb').onchange = function () { f.id_tkb = this.value; muat(); };
+    muat();
   } });
 })();

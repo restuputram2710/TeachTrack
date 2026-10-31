@@ -5,7 +5,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VER = '1.0.0';
+  const VER = '1.1.0';
   const LS = {
     get(k, d) { try { const v = localStorage.getItem('tt_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('tt_' + k, JSON.stringify(v)); } catch (e) { } },
@@ -194,6 +194,10 @@
   function tglIndo(t, opt) { const d = parseTgl(t); if (!d) return t || '-'; opt = opt || {}; const s = d.getUTCDate() + ' ' + (opt.pendek ? BLN3 : BULAN)[d.getUTCMonth()] + (opt.tanpaTahun ? '' : ' ' + d.getUTCFullYear()); return opt.hari ? HARI[d.getUTCDay()] + ', ' + s : s; }
   function hariOf(t) { const d = parseTgl(t); return d ? HARI[d.getUTCDay()] : ''; }
   function addDays(t, n) { const d = parseTgl(t); d.setUTCDate(d.getUTCDate() + n); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); }
+  /** "Minggu ke" dalam bulan (1–5) & kecocokan jadwal bergilir (kosong = setiap minggu). */
+  function mingguKe(t) { return Math.ceil(Number(String(t).slice(8, 10)) / 7); }
+  const ROMAWI = ['', 'I', 'II', 'III', 'IV', 'V'];
+  function cocokMinggu(j, t) { const mk = String(j.minggu_ke || '').split(',').filter(Boolean); return !mk.length || mk.indexOf(ROMAWI[mingguKe(t)]) >= 0; }
   function bulanLabel(ym) { const p = String(ym).split('-'); return BULAN[+p[1] - 1] + ' ' + p[0]; }
   function addMonths(ym, n) { const p = ym.split('-'); const d = new Date(Date.UTC(+p[0], +p[1] - 1 + n, 1)); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1); }
   function akhirBulan(ym) { return addDays(addMonths(ym, 1) + '-01', -1); }
@@ -384,7 +388,7 @@
     VER: VER, LS: LS, CFG: CFG, configured: configured, Sesi: Sesi, api: api, apiQ: apiQ, load: load, Cache: Cache, markStale: markStale,
     warmUp: warmUp, newGen: function () { return ++routeGen; }, setAuthLost: function (f) { onAuthLost = f; }, Set: Setelan, palette: palette, applyTheme: applyTheme, contrast: contrast, hexToRgb: hexToRgb,
     HARI: HARI, BULAN: BULAN, BLN3: BLN3, esc: esc, pad: pad, nowWib: nowWib, parseTgl: parseTgl, tglIndo: tglIndo, hariOf: hariOf, addDays: addDays,
-    bulanLabel: bulanLabel, addMonths: addMonths, akhirBulan: akhirBulan, rupiah: rupiah, angka: angka, menit: menit, jam5: jam5, inisial: inisial, avColor: avColor, avatar: avatar,
+    bulanLabel: bulanLabel, mingguKe: mingguKe, cocokMinggu: cocokMinggu, ROMAWI: ROMAWI, addMonths: addMonths, akhirBulan: akhirBulan, rupiah: rupiah, angka: angka, menit: menit, jam5: jam5, inisial: inisial, avColor: avColor, avatar: avatar,
     salam: salam, waLink: waLink, debounce: debounce, $: $, $$: $$, on: on, STATUS: STATUS, ABS_ST: ABS_ST, chipStatus: chipStatus, chipAbsen: chipAbsen,
     JENIS_IZIN: JENIS_IZIN, chipIzin: chipIzin, toast: toast, modal: modal, confirm: confirmDlg, prompt: promptDlg, withBtn: withBtn,
     fileToDataUrl: fileToDataUrl, loadImg: loadImg, compressImage: compressImage, dataUrlBytes: dataUrlBytes, downloadDataUrl: downloadDataUrl, downloadText: downloadText,

@@ -606,3 +606,15 @@ button.glass { cursor: pointer; font-family: var(--f-body); font-weight: 600; }
 
 .lp-bar { position: sticky; bottom: calc(var(--nav-h) + 12px + var(--safe-b)); z-index: 5; box-shadow: var(--sh-3); }
 @media (min-width: 1024px) { .lp-bar { bottom: 16px; } }
+
+/* v1.1 — kredit pembuat (tampil di bawah setiap halaman) */
+.page::after, .a-page::after { content: attr(data-credit); display: block; text-align: center; margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line-2); font: 500 11.5px/1.5 var(--f-body); color: var(--tx-3); }
+.credit { margin-top: 10px; font: 500 11.5px/1.5 var(--f-body); color: var(--tx-3); }
+.credit b { color: var(--p); font-weight: 600; }
+.mk-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.mk-chips label { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); cursor: pointer; font: 600 13px/1 var(--f-head); }
+.mk-chips input { accent-color: var(--p); }
+.jr-card textarea { min-height: 72px; }
+.jr-list { margin: 6px 0 0; padding-left: 20px; font-size: 13.5px; line-height: 1.6; }
+.grid2 > *, .grid3 > * { min-width: 0; }
+input[type="month"].input, input[type="date"].input { min-width: 0; max-width: 100%; }
