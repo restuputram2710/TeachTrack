@@ -181,7 +181,10 @@
     // Minggu berjalan (Senin–Minggu)
     const idxHari = (T.HARI.indexOf(now.hari) + 6) % 7, senin = T.addDays(now.tgl, -idxHari);
     const week = []; for (let i = 0; i < 7; i++) week.push(T.addDays(senin, i));
-    let sel = p.t && week.indexOf(p.t) >= 0 ? p.t : now.tgl;
+    // Jadwal TKB hanya Sabtu & Minggu: strip menampilkan dua hari itu saja per pekan
+    const akhirPekan = function (t) { const h = T.hariOf(t); return h === 'Sabtu' || h === 'Minggu'; };
+    const sabMin = function (t) { const i = (T.HARI.indexOf(T.hariOf(t)) + 6) % 7, s = T.addDays(t, -i); return [T.addDays(s, 5), T.addDays(s, 6)]; };
+    let sel = p.t && akhirPekan(p.t) ? p.t : (akhirPekan(now.tgl) ? now.tgl : sabMin(now.tgl)[0]);
     bootLoad(function (d, m) {
       if (!d) { el.innerHTML = errBox(m.error); return; }
       const jad = d.jadwal || [];
@@ -194,8 +197,11 @@
           '<h3 class="mt-8">' + esc(T.Set.v.wilayah || 'SMA Terbuka') + '</h3><div class="small muted">Induk: ' + esc(T.Set.v.nama_sekolah_induk || '-') + '</div></div><span class="itile">' + ic('cap', 24) + '</span></div>' +
           '<div class="grid2 mt-16"><div class="row" style="padding:10px 12px;border-radius:12px;background:var(--bg)">' + ic('clock', 18) + '<div><div class="xs muted">Beban Mengajar</div><b class="mono small">' + (Math.round(menitTotal / 6) / 10) + ' jam / minggu</b></div></div>' +
           '<div class="row" style="padding:10px 12px;border-radius:12px;background:var(--bg)">' + ic('building', 18) + '<div><div class="xs muted">Lokasi Belajar</div><b class="mono small">' + Object.keys(tkbN).length + ' TKB Binaan</b></div></div></div></div>' +
-          '<div class="row-b mt-20" style="margin-bottom:10px"><span class="eyebrow">Pilih Hari Mengajar</span><span class="xs muted row">' + ic('chevronLeft', 13) + 'Geser' + ic('chevronRight', 13) + '</span></div>' +
-          '<div class="days" id="days">' + week.map(function (t) {
+          '<div class="row-b mt-20" style="margin-bottom:10px"><span class="eyebrow">Pilih Hari Mengajar</span><span class="row">' +
+          '<button class="icon-btn" id="wkPrev" aria-label="Pekan sebelumnya">' + ic('chevronLeft', 16) + '</button>' +
+          '<span class="xs muted mono" style="white-space:nowrap">' + T.tglIndo(sabMin(sel)[0], { pendek: true, tanpaTahun: true }) + ' – ' + T.tglIndo(sabMin(sel)[1], { pendek: true }) + '</span>' +
+          '<button class="icon-btn" id="wkNext" aria-label="Pekan berikutnya">' + ic('chevronRight', 16) + '</button></span></div>' +
+          '<div class="days days-2" id="days">' + sabMin(sel).map(function (t) {
             const n = jad.filter(function (j) { return j.hari === T.hariOf(t) && T.cocokMinggu(j, t); }).length, dd = T.parseTgl(t);
             return '<button class="day ' + (t === sel ? 'on' : '') + (t === now.tgl ? ' today' : '') + '" data-t="' + t + '"><small>' + T.hariOf(t).slice(0, 3) + '</small><b>' + dd.getUTCDate() + '</b><i>' + (n ? n + ' Sesi' : 'Off') + '</i></button>';
           }).join('') + '</div>' +
@@ -206,6 +212,8 @@
           '<div class="card card-pad card-tint mt-20 row" style="align-items:flex-start;gap:12px">' + ic('help', 22) + '<div><h4>Penyesuaian Jadwal TKB?</h4><p class="small muted mt-4">Perlu bertukar sesi atau ada perubahan jadwal? Hubungi admin agar jadwal diperbarui.</p>' +
           (T.Set.v.kontak_admin_wa ? '<a class="link mt-8" target="_blank" rel="noopener" href="' + T.waLink(T.Set.v.kontak_admin_wa, 'Halo admin, saya ingin menyesuaikan jadwal mengajar.') + '">Hubungi Admin ' + ic('arrowRight', 15) + '</a>' : '') + '</div></div>';
         T.on($('#days'), 'click', '[data-t]', function (e, b) { sel = b.getAttribute('data-t'); draw(); });
+        const wkP = $('#wkPrev'); if (wkP) wkP.onclick = function () { sel = T.addDays(sel, -7); draw(); };
+        const wkN = $('#wkNext'); if (wkN) wkN.onclick = function () { sel = T.addDays(sel, 7); draw(); };
         const bj = $('#btnJdwPdf'); if (bj) bj.onclick = function () { App.unduhJadwalTkb(d.tkb, this); };
         const on = $('.day.on'); if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
       };

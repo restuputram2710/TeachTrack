@@ -621,3 +621,7 @@ input[type="month"].input, input[type="date"].input { min-width: 0; max-width: 1
 
 /* v1.2 — Bukti Kinerja: foto dokumentasi */
 .bk-thumb { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: 14px; border: 1px solid var(--line); background: var(--slate-bg); }
+
+/* Jadwal: strip hanya Sabtu & Minggu (2 kolom, lebar penuh) */
+.days.days-2 { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; scroll-snap-type: none; }
+.days.days-2 .day { width: auto; }
