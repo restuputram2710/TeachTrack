@@ -5,7 +5,7 @@
    ========================================================================== */
 (function () {
   'use strict';
-  const VER = '1.1.0';
+  const VER = '1.2.0';
   const LS = {
     get(k, d) { try { const v = localStorage.getItem('tt_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem('tt_' + k, JSON.stringify(v)); } catch (e) { } },

@@ -535,7 +535,7 @@
     const ym = T.nowWib().tgl.slice(0, 7);
     const f = T.LS.get('jurf', null) || { dari: ym, sampai: ym, id_tkb: '' };
     let D = null;
-    el.innerHTML = '<div class="card card-pad"><div class="row" style="gap:12px;align-items:flex-start"><span class="itile">' + ic('book', 22) + '</span><div><h3 style="font-size:16.5px">Laporan Bukti Kinerja &amp; Dokumentasi</h3><p class="small muted mt-4">Disusun otomatis dari absensi di TKB Anda: mata pelajaran, guru kunjung yang hadir, dan foto. Satu baris untuk setiap akhir pekan (Sabtu–Minggu).</p></div></div>' +
+    el.innerHTML = (App.bannerBukti ? App.bannerBukti() : '') + '<div class="card card-pad"><div class="row" style="gap:12px;align-items:flex-start"><span class="itile">' + ic('book', 22) + '</span><div><h3 style="font-size:16.5px">Laporan Bukti Kinerja &amp; Dokumentasi</h3><p class="small muted mt-4">Disusun otomatis dari absensi di TKB Anda: mata pelajaran, guru kunjung yang hadir, dan foto. Satu baris untuk setiap akhir pekan (Sabtu–Minggu).</p></div></div>' +
       '<div class="field mt-16"><label class="label" for="jrTkb">TKB</label><select class="select" id="jrTkb"><option value="">Memuat…</option></select></div>' +
       '<div class="grid2 mt-12"><div class="field"><label class="label" for="jrDari">Dari bulan</label><input class="input input-sm" type="month" id="jrDari" value="' + f.dari + '"></div><div class="field"><label class="label" for="jrSampai">Sampai bulan</label><input class="input input-sm" type="month" id="jrSampai" value="' + f.sampai + '"></div></div>' +
       '<button class="btn btn-tonal btn-block mt-12" id="jrGo">' + ic('refresh', 18) + ' Tampilkan</button></div><div id="jrBody" class="mt-16"></div>';
